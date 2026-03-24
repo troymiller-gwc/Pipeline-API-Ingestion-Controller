@@ -22,7 +22,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install
       - name: Typecheck
         run: pnpm run typecheck
@@ -39,7 +38,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
       - run: pnpm install
       - name: Build API Server
         run: pnpm --filter @workspace/api-server run build
