@@ -131,3 +131,33 @@ Utility scripts package. Each script is a `.ts` file in `src/` with a correspond
 Phase 1 (Foundation) is **complete**. All PostgreSQL tables, shared types/enums, BigQuery DDL, and database client are built. Seeded with NICE CXone data.
 
 Phase 2 (Backend API) is **complete**. All CRUD endpoints for source systems, endpoints, parameters, extraction runs (with concurrency guard), monitoring events, cancel, and replay are built and tested.
+
+Phase 3 (Frontend UI) is **complete**. The `artifacts/control-plane` React+Vite app at `/control-plane/` provides a full operator control panel with sidebar navigation, source system CRUD, endpoint configuration, manual run trigger with request preview, and run monitoring with event timeline.
+
+### `artifacts/control-plane` (`@workspace/control-plane`)
+
+React + Vite frontend application. The operator control panel for the API Ingestion Control Plane.
+
+- **Port**: 24565 (proxies API calls to `api-server` on port 8080 via Vite proxy)
+- **Base path**: `/control-plane/`
+- **Routing**: wouter with Switch-based routing
+- **State management**: TanStack React Query
+- **UI components**: Shadcn UI (full component library)
+- **Theme**: Professional blue HSL color scheme (light/dark modes)
+
+Pages:
+- **Source Systems** (`/`) — List, create, edit, deactivate source systems with status badges
+- **Endpoints** (`/endpoints`) — List endpoints filtered by source system, create/edit with pagination/incremental strategy config, trigger runs
+- **Runs** (`/runs`) — Run history with status badges, auto-refresh, status filtering
+- **Run Detail** (`/runs/:id`) — Run metadata, timing, counts, events timeline with severity coloring, cancel/replay actions
+- **Manual Run** (`/runs/new/:endpointId`) — Dynamic parameter form from endpoint metadata, request preview panel, trigger button
+
+Key files:
+- `src/App.tsx` — Root component with routing
+- `src/components/layout.tsx` — App shell with sidebar navigation
+- `src/lib/api.ts` — API client with typed fetch wrapper
+- `src/pages/source-systems.tsx` — Source system CRUD
+- `src/pages/endpoints.tsx` — Endpoint configuration
+- `src/pages/runs.tsx` — Run list/monitor
+- `src/pages/run-detail.tsx` — Run detail with events timeline
+- `src/pages/run-new.tsx` — Manual run trigger with request preview
