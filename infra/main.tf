@@ -8,10 +8,7 @@ terraform {
     }
   }
 
-  backend "gcs" {
-    bucket = "your-terraform-state-bucket"
-    prefix = "control-plane"
-  }
+  backend "local" {}
 }
 
 provider "google" {
