@@ -285,10 +285,11 @@ export default function ArchitecturePage() {
                       <p className="text-xs text-muted-foreground">{auth.desc}</p>
                     </div>
                   ))}
-                  <div className="p-2 rounded border border-dashed border-yellow-400 bg-yellow-50">
-                    <p className="text-xs font-semibold text-yellow-700">Open Question</p>
-                    <p className="text-xs text-yellow-600">
-                      Token refresh, caching, and mid-run expiration handling are not yet specified.
+                  <div className="p-2 rounded border border-green-200 bg-green-50">
+                    <p className="text-xs font-semibold text-green-700">Decided (Q3)</p>
+                    <p className="text-xs text-green-600">
+                      Auth module resolves credentials from Secret Manager at startup, caches tokens with proactive 
+                      refresh (&lt;10% TTL), re-acquires on mid-run expiration, and logs AUTH_REFRESHED events.
                     </p>
                   </div>
                 </div>
