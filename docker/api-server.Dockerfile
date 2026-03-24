@@ -3,11 +3,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 FROM base AS deps
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY lib/db/package.json lib/db/
 COPY lib/api-zod/package.json lib/api-zod/
 COPY artifacts/api-server/package.json artifacts/api-server/
-RUN pnpm install --frozen-lockfile --prod=false
+RUN pnpm install --prod=false
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
