@@ -8,6 +8,7 @@ import {
   Grid3X3,
   Plug,
   HelpCircle,
+  Hammer,
   Menu,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const navItems = [
   { path: "/features", label: "Features", icon: Grid3X3 },
   { path: "/connectors", label: "Connectors", icon: Plug },
   { path: "/open-questions", label: "Open Questions", icon: HelpCircle },
+  { path: "/build-steps", label: "Build Steps", icon: Hammer },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {

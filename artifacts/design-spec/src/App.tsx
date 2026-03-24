@@ -10,6 +10,7 @@ import ExecutionFlowPage from "@/pages/execution-flow";
 import FeaturesPage from "@/pages/features";
 import ConnectorsPage from "@/pages/connectors";
 import OpenQuestionsPage from "@/pages/open-questions";
+import BuildStepsPage from "@/pages/build-steps";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ function Router() {
         <Route path="/features" component={FeaturesPage} />
         <Route path="/connectors" component={ConnectorsPage} />
         <Route path="/open-questions" component={OpenQuestionsPage} />
+        <Route path="/build-steps" component={BuildStepsPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
