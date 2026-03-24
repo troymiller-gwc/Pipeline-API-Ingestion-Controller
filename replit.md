@@ -31,6 +31,18 @@ artifacts-monorepo/
 ├── scripts/                # Utility scripts (single workspace package)
 │   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
 ├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
+├── docker/                 # Production Dockerfiles
+│   ├── api-server.Dockerfile
+│   ├── control-plane.Dockerfile
+│   ├── extraction-job.Dockerfile
+│   └── nginx.conf          # Nginx config for frontend container
+├── infra/                  # Terraform IaC for GCP
+│   ├── main.tf             # Cloud SQL, IAM, VPC, Artifact Registry, WIF, BigQuery, Secret Manager
+│   ├── variables.tf        # project_id, region, db_tier, github_repo
+│   └── outputs.tf          # Connection names, service account emails, WIF provider
+├── .github/workflows/      # GitHub Actions CI/CD
+│   ├── ci.yml              # PR: lint, typecheck, build, Docker build test
+│   └── cd.yml              # Main: build+push images, deploy Cloud Run, sync schedules
 ├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
 ├── tsconfig.json           # Root TS project references
 └── package.json            # Root package with hoisted devDeps
@@ -77,6 +89,8 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
   - `parameters.ts` — CRUD for endpoint parameters (list by endpoint, create, update, delete)
   - `runs.ts` — Run management (create with concurrency guard via SELECT...FOR UPDATE, list with filtering/pagination, get detail with events, cancel, replay), request preview
 - Middleware: `src/middlewares/error-handler.ts` — AppError class, Zod validation error handling, 500 fallback
+- Services: `src/services/cloud-run.ts` — Cloud Run Job triggering and Cloud Scheduler sync (GCP clients lazy-loaded, dev mode stubs)
+- Scheduler routes: `src/routes/scheduler.ts` — `POST /scheduler/trigger` (creates scheduled run + triggers Cloud Run Job), `POST /scheduler/sync` (syncs all schedule_cron → Cloud Scheduler), `POST /scheduler/sync/:endpointId`
 - Depends on: `@workspace/db`, `@workspace/api-zod`, `zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
@@ -152,6 +166,8 @@ Phase 2 (Backend API) is **complete**. All CRUD endpoints for source systems, en
 Phase 3 (Frontend UI) is **complete**. The `artifacts/control-plane` React+Vite app at `/control-plane/` provides a full operator control panel with sidebar navigation, source system CRUD, endpoint configuration, manual run trigger with request preview, and run monitoring with event timeline.
 
 Phase 4 (Execution Engine) is **complete**. The `lib/execution-engine` package implements the Cloud Run Job extraction pipeline with auth, pagination, BigQuery writes, and orchestration.
+
+Phase 5 (Scheduling & Deployment) is **complete**. Cloud Scheduler integration, Dockerfiles, GitHub Actions CI/CD, and Terraform infrastructure-as-code.
 
 ### `artifacts/control-plane` (`@workspace/control-plane`)
 
