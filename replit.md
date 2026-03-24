@@ -26,7 +26,8 @@ artifacts-monorepo/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
+│   ├── db/                 # Drizzle ORM schema + DB connection
+│   └── execution-engine/   # Cloud Run Job extraction pipeline
 ├── scripts/                # Utility scripts (single workspace package)
 │   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
 ├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
@@ -119,6 +120,22 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Also c
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `lib/execution-engine` (`@workspace/execution-engine`)
+
+Cloud Run Job entry point for API data extraction. Designed to run in GCP Cloud Run Jobs (not in dev environment due to PHI security). In dev mode, BigQuery writes are logged but not sent, and secrets are read from env vars.
+
+- `src/index.ts` — Entry point: reads `RUN_ID` env var, connects to PostgreSQL, runs extraction, exits with status code
+- `src/orchestrator.ts` — Job orchestrator: loads run/endpoint/source config from DB, coordinates auth → paginate → write → checkpoint flow, manages PENDING → RUNNING → COMPLETED/FAILED status transitions
+- `src/auth.ts` — Auth module: resolves credentials from GCP Secret Manager (or env vars in dev), supports API_KEY, OAUTH2_CLIENT_CREDENTIALS, BASIC, BEARER_TOKEN; OAuth2 tokens cached with proactive refresh at <10% TTL
+- `src/paginator.ts` — Pagination engine: strategy pattern for NONE, PAGE_NUMBER, OFFSET_LIMIT, NEXT_TOKEN; calls onPage callback per page for streaming writes
+- `src/rate-limiter.ts` — Rate limiter: token bucket with configurable requests/second or requests/minute, EXPONENTIAL/LINEAR/FIXED backoff, retry on HTTP 429 with Retry-After header support
+- `src/bq-writer.ts` — BigQuery writer: builds `raw.api_payload` rows with SHA-256 hash, buffers and batch-inserts, dev mode logs instead of writing
+- `src/event-logger.ts` — Event logger: writes extraction_event records for run lifecycle tracking (RUN_STARTED, PAGE_FETCHED, PAGE_WRITTEN, CHECKPOINT_SAVED, etc.)
+- Build: `pnpm --filter @workspace/execution-engine run build` — esbuild bundle to `dist/index.mjs`
+- Run: `RUN_ID=<uuid> pnpm --filter @workspace/execution-engine run start`
+- Depends on: `@workspace/db`, `@workspace/api-zod`
+- GCP deps (lazy-loaded): `@google-cloud/secret-manager`, `@google-cloud/bigquery`
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
@@ -133,6 +150,8 @@ Phase 1 (Foundation) is **complete**. All PostgreSQL tables, shared types/enums,
 Phase 2 (Backend API) is **complete**. All CRUD endpoints for source systems, endpoints, parameters, extraction runs (with concurrency guard), monitoring events, cancel, and replay are built and tested.
 
 Phase 3 (Frontend UI) is **complete**. The `artifacts/control-plane` React+Vite app at `/control-plane/` provides a full operator control panel with sidebar navigation, source system CRUD, endpoint configuration, manual run trigger with request preview, and run monitoring with event timeline.
+
+Phase 4 (Execution Engine) is **complete**. The `lib/execution-engine` package implements the Cloud Run Job extraction pipeline with auth, pagination, BigQuery writes, and orchestration.
 
 ### `artifacts/control-plane` (`@workspace/control-plane`)
 
