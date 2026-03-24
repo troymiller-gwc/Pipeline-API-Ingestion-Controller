@@ -3,12 +3,12 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 FROM base AS deps
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY lib/api-client-react/package.json lib/api-client-react/
 COPY lib/api-zod/package.json lib/api-zod/
 COPY lib/api-spec/package.json lib/api-spec/
 COPY artifacts/control-plane/package.json artifacts/control-plane/
-RUN pnpm install --frozen-lockfile --prod=false
+RUN pnpm install --prod=false
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
