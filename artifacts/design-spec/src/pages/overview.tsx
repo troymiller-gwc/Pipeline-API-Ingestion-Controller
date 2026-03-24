@@ -142,7 +142,7 @@ export default function OverviewPage() {
             { layer: "Backend API", tech: "TypeScript / Express", icon: <Server className="h-4 w-4" /> },
             { layer: "Execution", tech: "Cloud Run Jobs", icon: <Cloud className="h-4 w-4" /> },
             { layer: "Scheduling", tech: "Cloud Scheduler", icon: <Clock className="h-4 w-4" /> },
-            { layer: "Storage", tech: "BigQuery", icon: <Database className="h-4 w-4" /> },
+            { layer: "Storage", tech: "Cloud SQL + BigQuery", icon: <Database className="h-4 w-4" /> },
             { layer: "Secrets", tech: "Google Secret Manager", icon: <Shield className="h-4 w-4" /> },
           ].map((s) => (
             <Card key={s.layer} className="p-4">

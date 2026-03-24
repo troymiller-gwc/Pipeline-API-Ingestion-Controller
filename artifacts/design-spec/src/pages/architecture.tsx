@@ -28,8 +28,8 @@ export default function ArchitecturePage() {
               layer: "API Layer",
               tech: "TypeScript / Express",
               color: "bg-green-500",
-              purpose: "Metadata CRUD APIs, request builder, orchestration triggers, replay logic, BigQuery read/write operations",
-              components: ["Metadata APIs", "Request Builder", "Orchestration", "Replay Engine", "BigQuery Client"],
+              purpose: "Metadata CRUD APIs (PostgreSQL), request builder, orchestration triggers, replay logic, BigQuery writes for raw payloads",
+              components: ["Metadata APIs", "Request Builder", "Orchestration", "Replay Engine", "PostgreSQL Client", "BigQuery Client"],
             },
             {
               layer: "Execution Layer",
@@ -47,10 +47,10 @@ export default function ArchitecturePage() {
             },
             {
               layer: "Storage Layer",
-              tech: "BigQuery",
+              tech: "Cloud SQL (PostgreSQL) + BigQuery",
               color: "bg-red-500",
-              purpose: "Control metadata, operational audit data, and immutable raw API response payloads",
-              components: ["control.*", "ops.*", "raw.*"],
+              purpose: "PostgreSQL for control metadata and operational audit (OLTP). BigQuery for immutable raw API response payloads (OLAP).",
+              components: ["PostgreSQL: control.*, ops.*", "BigQuery: raw.api_payload"],
             },
             {
               layer: "Security Layer",
@@ -148,7 +148,8 @@ export default function ArchitecturePage() {
                       "Cloud Run (API + Frontend)",
                       "Cloud Run Jobs (Extraction)",
                       "Cloud Scheduler (Cron)",
-                      "BigQuery (Storage)",
+                      "Cloud SQL PostgreSQL (Control/Ops)",
+                      "BigQuery (Raw Payloads)",
                       "Secret Manager (Credentials)",
                       "IAM (Service Accounts)",
                     ].map((item) => (
@@ -300,49 +301,72 @@ export default function ArchitecturePage() {
       <Separator />
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">BigQuery Dataset Layout</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            {
-              dataset: "control",
-              role: "Configuration Metadata",
-              tables: ["source_system", "endpoint_definition", "endpoint_parameter"],
-              color: "border-blue-200",
-              desc: "Connector, endpoint, and parameter metadata that drives the system behavior",
-            },
-            {
-              dataset: "ops",
-              role: "Operational Audit",
-              tables: ["extraction_run", "extraction_event"],
-              color: "border-green-200",
-              desc: "Execution audit trails, run status, events, and replay tracking",
-            },
-            {
-              dataset: "raw",
-              role: "Raw Landing Zone",
-              tables: ["api_payload"],
-              color: "border-orange-200",
-              desc: "Immutable raw API response payloads — one row per HTTP response page",
-            },
-          ].map((ds) => (
-            <Card key={ds.dataset} className={ds.color}>
-              <CardHeader>
-                <CardTitle className="text-base font-mono">{ds.dataset}.*</CardTitle>
-                <CardDescription>{ds.role}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">{ds.desc}</p>
-                <div className="space-y-1">
-                  {ds.tables.map((t) => (
-                    <div key={t} className="flex items-center gap-2">
-                      <Database className="h-3 w-3 text-muted-foreground" />
-                      <code className="text-xs">{ds.dataset}.{t}</code>
-                    </div>
-                  ))}
+        <h2 className="text-xl font-semibold mb-4">Storage Layout</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="border-blue-200">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-blue-600" />
+                <CardTitle className="text-base">Cloud SQL (PostgreSQL)</CardTitle>
+              </div>
+              <CardDescription>OLTP — CRUD, transactions, constraints, indexes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="p-2 bg-blue-50 rounded">
+                  <p className="text-xs font-semibold text-blue-700">control schema</p>
+                  <div className="space-y-1 mt-1">
+                    {["source_system", "endpoint_definition", "endpoint_parameter"].map((t) => (
+                      <div key={t} className="flex items-center gap-2">
+                        <Database className="h-3 w-3 text-muted-foreground" />
+                        <code className="text-xs">{t}</code>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="p-2 bg-green-50 rounded">
+                  <p className="text-xs font-semibold text-green-700">ops schema</p>
+                  <div className="space-y-1 mt-1">
+                    {["extraction_run", "extraction_event"].map((t) => (
+                      <div key={t} className="flex items-center gap-2">
+                        <Database className="h-3 w-3 text-muted-foreground" />
+                        <code className="text-xs">{t}</code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-orange-200">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-orange-600" />
+                <CardTitle className="text-base">BigQuery</CardTitle>
+              </div>
+              <CardDescription>OLAP — append-only raw payloads, analytical queries</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-2 bg-orange-50 rounded">
+                <p className="text-xs font-semibold text-orange-700">raw dataset</p>
+                <div className="space-y-1 mt-1">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-3 w-3 text-muted-foreground" />
+                    <code className="text-xs">api_payload</code>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Partitioned by DATE(ingested_ts), clustered by source_system_id, endpoint_id, run_id
+                </p>
+              </div>
+              <div className="mt-3 p-2 border rounded border-dashed">
+                <p className="text-[10px] text-muted-foreground">
+                  <strong>Cross-store link:</strong> api_payload.run_id references extraction_run.run_id in PostgreSQL (application-level, not DB-enforced)
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
