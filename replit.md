@@ -68,9 +68,15 @@ Pages:
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
+- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`, error handler
+- Routes: `src/routes/index.ts` mounts sub-routers
+  - `health.ts` — `GET /healthz`
+  - `source-systems.ts` — CRUD for source systems (list, get, create, update, soft-delete)
+  - `endpoints.ts` — CRUD for endpoint definitions (list with filter, get with params, create, update, soft-delete)
+  - `parameters.ts` — CRUD for endpoint parameters (list by endpoint, create, update, delete)
+  - `runs.ts` — Run management (create with concurrency guard via SELECT...FOR UPDATE, list with filtering/pagination, get detail with events, cancel, replay), request preview
+- Middleware: `src/middlewares/error-handler.ts` — AppError class, Zod validation error handling, 500 fallback
+- Depends on: `@workspace/db`, `@workspace/api-zod`, `zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
 - Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
@@ -123,3 +129,5 @@ Utility scripts package. Each script is a `.ts` file in `src/` with a correspond
 ## Build Progress
 
 Phase 1 (Foundation) is **complete**. All PostgreSQL tables, shared types/enums, BigQuery DDL, and database client are built. Seeded with NICE CXone data.
+
+Phase 2 (Backend API) is **complete**. All CRUD endpoints for source systems, endpoints, parameters, extraction runs (with concurrency guard), monitoring events, cancel, and replay are built and tested.
