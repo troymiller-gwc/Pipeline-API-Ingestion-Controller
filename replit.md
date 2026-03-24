@@ -81,7 +81,12 @@ Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client insta
 
 - `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
 - `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
+- `src/schema/source-system.ts` — `source_system` table (PK: source_system_id)
+- `src/schema/endpoint-definition.ts` — `endpoint_definition` table (PK: endpoint_id, FK → source_system)
+- `src/schema/endpoint-parameter.ts` — `endpoint_parameter` table (PK: endpoint_parameter_id, FK → endpoint_definition, UNIQUE(endpoint_id, parameter_name))
+- `src/schema/extraction-run.ts` — `extraction_run` table (PK: run_id UUID, self-referencing parent_run_id FK, indexes on status/created)
+- `src/schema/extraction-event.ts` — `extraction_event` table (PK: event_id UUID, FK → extraction_run, indexes on run/type)
+- `src/schema/bigquery-api-payload.sql` — BigQuery DDL for `raw.api_payload` (partitioned by DATE(ingested_ts), clustered by source_system_id/endpoint_id/run_id)
 - `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
 - Exports: `.` (pool, db, schema), `./schema` (schema only)
 
@@ -98,7 +103,11 @@ Run codegen: `pnpm --filter @workspace/api-spec run codegen`
 
 ### `lib/api-zod` (`@workspace/api-zod`)
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Also contains hand-written enums and schemas for the control plane domain:
+
+- `src/enums.ts` — AuthType, HttpMethod, PaginationStrategy, IncrementalStrategy, RunType, RunStatus, PageStatus, EventType, EventSeverity, ParameterLocation, ParameterDataType, BackoffStrategy
+- `src/schemas.ts` — Zod schemas for CRUD operations (CreateSourceSystem, CreateEndpointDefinition, CreateEndpointParameter, TriggerRun) and response types (SourceSystemResponse, EndpointDefinitionResponse, etc.), plus RateLimitConfig, PaginationConfig, IncrementalConfig
+- `src/generated/` — Orval-generated schemas from OpenAPI spec
 
 ### `lib/api-client-react` (`@workspace/api-client-react`)
 
@@ -107,3 +116,10 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+- `seed` — Seeds NICE CXone source_system, get_contacts endpoint_definition, and 4 endpoint_parameters
+- `verify-schema` — Verifies all tables exist and seed data is present
+
+## Build Progress
+
+Phase 1 (Foundation) is **complete**. All PostgreSQL tables, shared types/enums, BigQuery DDL, and database client are built. Seeded with NICE CXone data.
