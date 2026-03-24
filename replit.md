@@ -50,6 +50,19 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
+### `artifacts/design-spec` (`@workspace/design-spec`)
+
+React + Vite frontend-only application serving as the API Ingestion Control Plane design specification. Contains 7 navigable pages covering project overview, architecture, data model, execution flow, features, connectors, and open questions/recommendations. No backend required — all content is static.
+
+Pages:
+- **Overview** — Project purpose, users, capabilities, scope, definition of done
+- **Architecture** — System layers, deployment topology, data flow diagrams, security boundary
+- **Data Model** — All 6 BigQuery table schemas with column details, entity relationships, strategy enums
+- **Execution Flow** — Manual/scheduled run flows, pagination engine, replay logic, checkpointing, failure handling
+- **Features** — MVP feature map with UI screens and API endpoints, request builder rules, status model
+- **Connectors** — NICE CXone get_contacts connector specification with parameters, pagination, and execution logic
+- **Open Questions** — 9 identified design gaps with severity, descriptions, and recommendations
+
 ### `artifacts/api-server` (`@workspace/api-server`)
 
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.

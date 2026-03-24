@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "API Ingestion Control Plane - Design Specification"
+version = "1.0.0"
+id = "artifacts/design-spec"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24513
+
+[services.development]
+run = "pnpm --filter @workspace/design-spec run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/design-spec", "run", "build" ]
+publicDir = "artifacts/design-spec/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24513"
+BASE_PATH = "/"
