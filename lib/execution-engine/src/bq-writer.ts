@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { BigQuery } from "@google-cloud/bigquery";
 
 export interface ApiPayloadRow {
   runId: string;
@@ -58,11 +59,11 @@ export function buildPayloadRow(params: {
 export class BigQueryWriter {
   private buffer: ApiPayloadRow[] = [];
   private batchSize: number;
-  private client: any = null;
+  private client: BigQuery | null = null;
   private tableRef: any = null;
   private maxRetries = 2;
 
-  constructor(batchSize = 50) {
+  constructor(batchSize = 2) {
     this.batchSize = batchSize;
   }
 
@@ -73,7 +74,6 @@ export class BigQueryWriter {
     }
 
     try {
-      const { BigQuery } = await import("@google-cloud/bigquery" as string);
       this.client = new BigQuery();
       this.tableRef = this.client.dataset("raw").table("api_payload");
     } catch {
@@ -94,24 +94,26 @@ export class BigQueryWriter {
     const rows = [...this.buffer];
 
     if (this.tableRef) {
-      let lastErr: Error | null = null;
-      for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-        try {
-          await this.tableRef.insert(rows);
-          this.buffer = [];
-          return;
-        } catch (err: any) {
-          lastErr = err;
-          if (err.name === "PartialFailureError") {
-            const failedCount = err.errors?.length ?? 0;
-            console.error(`[BQ Writer] Partial failure: ${failedCount}/${rows.length} rows failed (attempt ${attempt + 1})`);
-          }
-          if (attempt < this.maxRetries) {
-            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      for (const row of rows) {
+        let lastErr: Error | null = null;
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+          try {
+            await this.tableRef.insert([row]);
+            break;
+          } catch (err: any) {
+            lastErr = err;
+            if (err.name === "PartialFailureError") {
+              console.error(`[BQ Writer] Partial failure for page ${row.pageNumber} (attempt ${attempt + 1})`);
+            }
+            if (attempt < this.maxRetries) {
+              await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            } else {
+              throw lastErr ?? new Error(`BigQuery insert failed for page ${row.pageNumber} after retries`);
+            }
           }
         }
       }
-      throw lastErr ?? new Error("BigQuery insert failed after retries");
+      this.buffer = [];
     } else {
       this.buffer = [];
       console.log(`[BQ Writer] Would write ${rows.length} rows to raw.api_payload`);
