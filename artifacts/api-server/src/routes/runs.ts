@@ -13,6 +13,56 @@ import { AppError } from "../middlewares/error-handler";
 
 const router: IRouter = Router();
 
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || "gwc-poc-487320";
+const GCP_REGION = process.env.GCP_REGION || "us-central1";
+const EXTRACTION_JOB_NAME = process.env.EXTRACTION_JOB_NAME || "extraction-job";
+
+async function getAccessToken(): Promise<string> {
+  const resp = await fetch(
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+    { headers: { "Metadata-Flavor": "Google" } },
+  );
+  if (!resp.ok) throw new Error(`Failed to get access token: ${resp.status}`);
+  const data = await resp.json() as { access_token: string };
+  return data.access_token;
+}
+
+async function triggerExtractionJob(runId: string): Promise<string | null> {
+  try {
+    const token = await getAccessToken();
+    const url = `https://${GCP_REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GCP_PROJECT_ID}/jobs/${EXTRACTION_JOB_NAME}:run`;
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        overrides: {
+          containerOverrides: [{
+            env: [{ name: "RUN_ID", value: runId }],
+          }],
+        },
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(`[Trigger] Failed to trigger extraction job: ${resp.status} ${text}`);
+      return null;
+    }
+
+    const data = await resp.json() as { metadata?: { name?: string } };
+    const executionName = data.metadata?.name ?? null;
+    console.log(`[Trigger] Extraction job triggered for run ${runId}, execution: ${executionName}`);
+    return executionName;
+  } catch (err) {
+    console.error("[Trigger] Error triggering extraction job:", err);
+    return null;
+  }
+}
+
 async function acquireLockAndInsert(
   endpointId: string,
   values: typeof extractionRunTable.$inferInsert,
@@ -72,7 +122,15 @@ router.post("/runs", async (req, res, next) => {
       status: "PENDING",
     });
 
-    res.status(201).json({ data: created });
+    const executionName = await triggerExtractionJob(created.runId);
+    if (executionName) {
+      await db
+        .update(extractionRunTable)
+        .set({ cloudRunJobName: EXTRACTION_JOB_NAME, cloudRunExecutionId: executionName })
+        .where(eq(extractionRunTable.runId, created.runId));
+    }
+
+    res.status(201).json({ data: { ...created, cloudRunExecutionId: executionName } });
   } catch (err) {
     next(err);
   }
@@ -231,7 +289,15 @@ router.post("/runs/:id/replay", async (req, res, next) => {
       .set({ status: "REPLAYED" })
       .where(eq(extractionRunTable.runId, req.params.id));
 
-    res.status(201).json({ data: created });
+    const executionName = await triggerExtractionJob(created.runId);
+    if (executionName) {
+      await db
+        .update(extractionRunTable)
+        .set({ cloudRunJobName: EXTRACTION_JOB_NAME, cloudRunExecutionId: executionName })
+        .where(eq(extractionRunTable.runId, created.runId));
+    }
+
+    res.status(201).json({ data: { ...created, cloudRunExecutionId: executionName } });
   } catch (err) {
     next(err);
   }
