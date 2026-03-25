@@ -21,22 +21,27 @@ export default function RunNewPage() {
     enabled: !!endpointId,
   });
 
-  const [windowStart, setWindowStart] = useState("");
-  const [windowEnd, setWindowEnd] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("00:00");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("23:59");
 
   const runMutation = useMutation({
     mutationFn: () => {
       const endpoint = endpointData?.data;
       if (!endpoint) throw new Error("Endpoint not loaded");
-      if (!windowStart || !windowEnd) throw new Error("Both start and end dates are required");
+      if (!startDate || !endDate) throw new Error("Both start and end dates are required");
+
+      const windowStartTs = `${startDate}T${startTime}:00.000Z`;
+      const windowEndTs = `${endDate}T${endTime}:00.000Z`;
 
       return api.runs.create({
         sourceSystemId: endpoint.sourceSystemId,
         endpointId,
         runType: "MANUAL",
         requestedBy: "operator",
-        windowStartTs: new Date(windowStart).toISOString(),
-        windowEndTs: new Date(windowEnd).toISOString(),
+        windowStartTs,
+        windowEndTs,
       });
     },
     onSuccess: (data) => {
@@ -74,24 +79,42 @@ export default function RunNewPage() {
           <p className="text-sm text-muted-foreground">
             Select the date range to extract. All timestamps are in UTC.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="windowStart">Start Date/Time (UTC)</Label>
-              <Input
-                id="windowStart"
-                type="datetime-local"
-                value={windowStart}
-                onChange={(e) => setWindowStart(e.target.value)}
-              />
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Start (UTC)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-32"
+                  step="60"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="windowEnd">End Date/Time (UTC)</Label>
-              <Input
-                id="windowEnd"
-                type="datetime-local"
-                value={windowEnd}
-                onChange={(e) => setWindowEnd(e.target.value)}
-              />
+            <div>
+              <Label className="text-sm font-medium mb-2 block">End (UTC)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-32"
+                  step="60"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -114,7 +137,7 @@ export default function RunNewPage() {
       <Button
         size="lg"
         onClick={() => runMutation.mutate()}
-        disabled={runMutation.isPending || !windowStart || !windowEnd}
+        disabled={runMutation.isPending || !startDate || !endDate}
       >
         <Play className="h-4 w-4 mr-2" />
         {runMutation.isPending ? "Triggering..." : "Trigger Run"}
