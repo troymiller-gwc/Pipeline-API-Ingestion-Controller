@@ -1,33 +1,27 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { BigQuery } from "@google-cloud/bigquery";
 
 export interface ApiPayloadRow {
-  runId: string;
-  sourceSystemId: string;
-  endpointId: string;
-  pageNumber: number;
-  httpStatusCode: number;
-  requestUrl: string;
-  responsePayload: string;
-  payloadHash: string;
-  pageStatus: string;
-  recordCount: number;
-  skip?: number | null;
-  pageToken?: string | null;
-  nextPageToken?: string | null;
-  ingestedTs: string;
-}
-
-function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-}
-
-function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    result[toSnakeCase(key)] = value;
-  }
-  return result;
+  raw_payload_id: string;
+  run_id: string;
+  source_system_id: string;
+  endpoint_id: string;
+  request_ts: string;
+  response_ts: string;
+  http_method: string;
+  request_url: string;
+  http_status_code: number;
+  page_number: number;
+  page_token: string | null;
+  next_page_token: string | null;
+  request_params_json: string | null;
+  request_body_json: string | null;
+  response_body_json: string;
+  record_count_hint: number;
+  payload_hash: string;
+  page_status: string;
+  error_message: string | null;
+  ingested_ts: string;
 }
 
 export function buildPayloadRow(params: {
@@ -40,31 +34,40 @@ export function buildPayloadRow(params: {
   responseBody: unknown;
   pageStatus: string;
   recordCount: number;
+  httpMethod?: string;
   skip?: number;
   pageToken?: string;
   nextPageToken?: string;
+  errorMessage?: string;
 }): ApiPayloadRow {
   const responsePayload = typeof params.responseBody === "string"
     ? params.responseBody
     : JSON.stringify(params.responseBody);
 
   const payloadHash = createHash("sha256").update(responsePayload).digest("hex");
+  const now = new Date().toISOString();
 
   return {
-    runId: params.runId,
-    sourceSystemId: params.sourceSystemId,
-    endpointId: params.endpointId,
-    pageNumber: params.pageNumber,
-    httpStatusCode: params.httpStatusCode,
-    requestUrl: params.requestUrl,
-    responsePayload,
-    payloadHash,
-    pageStatus: params.pageStatus,
-    recordCount: params.recordCount,
-    skip: params.skip ?? null,
-    pageToken: params.pageToken ?? null,
-    nextPageToken: params.nextPageToken ?? null,
-    ingestedTs: new Date().toISOString(),
+    raw_payload_id: randomUUID(),
+    run_id: params.runId,
+    source_system_id: params.sourceSystemId,
+    endpoint_id: params.endpointId,
+    request_ts: now,
+    response_ts: now,
+    http_method: params.httpMethod ?? "GET",
+    request_url: params.requestUrl,
+    http_status_code: params.httpStatusCode,
+    page_number: params.pageNumber,
+    page_token: params.pageToken ?? null,
+    next_page_token: params.nextPageToken ?? null,
+    request_params_json: null,
+    request_body_json: null,
+    response_body_json: responsePayload,
+    record_count_hint: params.recordCount,
+    payload_hash: payloadHash,
+    page_status: params.pageStatus,
+    error_message: params.errorMessage ?? null,
+    ingested_ts: now,
   };
 }
 
@@ -75,7 +78,7 @@ export class BigQueryWriter {
   private tableRef: any = null;
   private maxRetries = 2;
 
-  constructor(batchSize = 2) {
+  constructor(batchSize = 1) {
     this.batchSize = batchSize;
   }
 
@@ -107,25 +110,24 @@ export class BigQueryWriter {
 
     if (this.tableRef) {
       for (const row of rows) {
-        const snakeRow = convertKeysToSnakeCase(row as unknown as Record<string, unknown>);
         let lastErr: Error | null = null;
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
           try {
-            await this.tableRef.insert([snakeRow]);
-            console.log(`[BQ Writer] Wrote page ${row.pageNumber} (${row.recordCount} records)`);
+            await this.tableRef.insert([row]);
+            console.log(`[BQ Writer] Wrote page ${row.page_number} (${row.record_count_hint} records)`);
             break;
           } catch (err: any) {
             lastErr = err;
             if (err.name === "PartialFailureError") {
               const details = JSON.stringify(err.errors?.[0]?.errors || err.errors || err.message);
-              console.error(`[BQ Writer] Partial failure for page ${row.pageNumber} (attempt ${attempt + 1}): ${details}`);
+              console.error(`[BQ Writer] Partial failure for page ${row.page_number} (attempt ${attempt + 1}): ${details}`);
             } else {
-              console.error(`[BQ Writer] Error for page ${row.pageNumber} (attempt ${attempt + 1}): ${err.message}`);
+              console.error(`[BQ Writer] Error for page ${row.page_number} (attempt ${attempt + 1}): ${err.message}`);
             }
             if (attempt < this.maxRetries) {
               await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
             } else {
-              throw lastErr ?? new Error(`BigQuery insert failed for page ${row.pageNumber} after retries`);
+              throw lastErr ?? new Error(`BigQuery insert failed for page ${row.page_number} after retries`);
             }
           }
         }
@@ -135,7 +137,7 @@ export class BigQueryWriter {
       this.buffer = [];
       console.log(`[BQ Writer] Would write ${rows.length} rows to raw.api_payload`);
       for (const row of rows) {
-        console.log(`  page=${row.pageNumber} status=${row.pageStatus} records=${row.recordCount} hash=${row.payloadHash.slice(0, 12)}...`);
+        console.log(`  page=${row.page_number} status=${row.page_status} records=${row.record_count_hint} hash=${row.payload_hash.slice(0, 12)}...`);
       }
     }
   }
