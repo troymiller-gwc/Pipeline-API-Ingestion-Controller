@@ -18,6 +18,18 @@ export interface ApiPayloadRow {
   ingestedTs: string;
 }
 
+function toSnakeCase(str: string): string {
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[toSnakeCase(key)] = value;
+  }
+  return result;
+}
+
 export function buildPayloadRow(params: {
   runId: string;
   sourceSystemId: string;
@@ -95,15 +107,20 @@ export class BigQueryWriter {
 
     if (this.tableRef) {
       for (const row of rows) {
+        const snakeRow = convertKeysToSnakeCase(row as unknown as Record<string, unknown>);
         let lastErr: Error | null = null;
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
           try {
-            await this.tableRef.insert([row]);
+            await this.tableRef.insert([snakeRow]);
+            console.log(`[BQ Writer] Wrote page ${row.pageNumber} (${row.recordCount} records)`);
             break;
           } catch (err: any) {
             lastErr = err;
             if (err.name === "PartialFailureError") {
-              console.error(`[BQ Writer] Partial failure for page ${row.pageNumber} (attempt ${attempt + 1})`);
+              const details = JSON.stringify(err.errors?.[0]?.errors || err.errors || err.message);
+              console.error(`[BQ Writer] Partial failure for page ${row.pageNumber} (attempt ${attempt + 1}): ${details}`);
+            } else {
+              console.error(`[BQ Writer] Error for page ${row.pageNumber} (attempt ${attempt + 1}): ${err.message}`);
             }
             if (attempt < this.maxRetries) {
               await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
