@@ -32,4 +32,4 @@ COPY --from=build /app/artifacts/control-plane/dist/public /usr/share/nginx/html
 
 ENV API_UPSTREAM=http://api-server:8080
 EXPOSE 8080
-CMD ["/bin/sh", "-c", "sed \"s|API_UPSTREAM_PLACEHOLDER|$API_UPSTREAM|g\" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "API_HOST=$(echo $API_UPSTREAM | sed 's|https://||') && sed -e \"s|API_UPSTREAM_PLACEHOLDER|$API_UPSTREAM|g\" -e \"s|API_UPSTREAM_HOST_PLACEHOLDER|$API_HOST|g\" /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"]
