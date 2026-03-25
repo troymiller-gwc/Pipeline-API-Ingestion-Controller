@@ -11,7 +11,7 @@ COPY artifacts/control-plane/ artifacts/control-plane/
 RUN echo "node-linker=hoisted" >> .npmrc && pnpm install --frozen-lockfile=false
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN pnpm --filter @workspace/control-plane run build
+RUN cd artifacts/control-plane && ../../node_modules/.bin/vite build --config vite.config.ts
 
 FROM nginx:1.27-alpine AS production
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/*
