@@ -1,10 +1,13 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 
 export interface AuthCredentials {
   type: "API_KEY" | "OAUTH2_CLIENT_CREDENTIALS" | "BASIC" | "BEARER_TOKEN";
   apiKey?: string;
   clientId?: string;
   clientSecret?: string;
+  accessKeyId?: string;
+  accessKeySecret?: string;
   tokenUrl?: string;
   username?: string;
   password?: string;
@@ -31,10 +34,6 @@ export async function resolveCredentials(
     }
     throw new Error(`Secret "${secretName}" not found. Set SECRET_${secretName.toUpperCase().replace(/-/g, "_")} env var for local dev.`);
   }
-
-  const { SecretManagerServiceClient } = await import("@google-cloud/secret-manager" as string).catch(() => {
-    throw new Error("@google-cloud/secret-manager not available. Install it for GCP deployments.");
-  });
 
   const client = new SecretManagerServiceClient();
   const [version] = await client.accessSecretVersion({
@@ -70,28 +69,43 @@ async function acquireOAuth2Token(
   const tokenUrl = credentials.tokenUrl;
   if (!tokenUrl) throw new Error("OAuth2 tokenUrl is required");
 
-  const body = new URLSearchParams({
-    grant_type: "client_credentials",
-    client_id: credentials.clientId || "",
-    client_secret: credentials.clientSecret || "",
-  });
+  const isAccessKey = !!(credentials.accessKeyId && credentials.accessKeySecret);
 
-  if (credentials.scopes?.length) {
-    body.set("scope", credentials.scopes.join(" "));
+  let response: Response;
+
+  if (isAccessKey) {
+    response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessKeyId: credentials.accessKeyId,
+        accessKeySecret: credentials.accessKeySecret,
+      }),
+    });
+  } else {
+    const body = new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: credentials.clientId || "",
+      client_secret: credentials.clientSecret || "",
+    });
+
+    if (credentials.scopes?.length) {
+      body.set("scope", credentials.scopes.join(" "));
+    }
+
+    response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
   }
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
 
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`OAuth2 token acquisition failed: ${response.status} ${text}`);
   }
 
-  const data = await response.json() as { access_token: string; expires_in: number };
+  const data = await response.json() as { access_token: string; expires_in: number; token_type?: string };
   const now = Date.now();
 
   tokenCache.set(cacheKey, {
