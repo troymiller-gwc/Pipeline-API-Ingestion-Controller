@@ -11,9 +11,6 @@ RUN echo "node-linker=hoisted" >> .npmrc && pnpm install --prod=false
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/lib/db/node_modules ./lib/db/node_modules
-COPY --from=deps /app/lib/api-zod/node_modules ./lib/api-zod/node_modules
-COPY --from=deps /app/lib/execution-engine/node_modules ./lib/execution-engine/node_modules
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY lib/db/ lib/db/
 COPY lib/api-zod/ lib/api-zod/
