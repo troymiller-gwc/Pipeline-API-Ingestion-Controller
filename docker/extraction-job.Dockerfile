@@ -7,7 +7,7 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json .npmrc ./
 COPY lib/db/package.json lib/db/
 COPY lib/api-zod/package.json lib/api-zod/
 COPY lib/execution-engine/package.json lib/execution-engine/
-RUN pnpm install --prod=false
+RUN echo "node-linker=hoisted" >> .npmrc && pnpm install --prod=false
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
