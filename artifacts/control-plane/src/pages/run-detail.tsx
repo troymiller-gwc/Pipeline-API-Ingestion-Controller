@@ -113,8 +113,8 @@ export default function RunDetailPage() {
           <div className="flex justify-between"><span className="text-muted-foreground">Source System</span><span>{run.sourceSystemId}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Requested By</span><span>{run.requestedBy ?? "—"}</span></div>
           {run.parentRunId && <div className="flex justify-between"><span className="text-muted-foreground">Parent Run</span><span className="font-mono text-xs cursor-pointer text-primary" onClick={() => navigate(`/runs/${run.parentRunId}`)}>{run.parentRunId}</span></div>}
-          {run.windowStartTs && <div className="flex justify-between"><span className="text-muted-foreground">Window Start</span><span>{new Date(run.windowStartTs).toLocaleString()}</span></div>}
-          {run.windowEndTs && <div className="flex justify-between"><span className="text-muted-foreground">Window End</span><span>{new Date(run.windowEndTs).toLocaleString()}</span></div>}
+          {run.windowStartTs && <div className="flex justify-between"><span className="text-muted-foreground">Window Start</span><span>{new Date(run.windowStartTs).toLocaleString("en-US", { timeZone: "UTC" })} UTC</span></div>}
+          {run.windowEndTs && <div className="flex justify-between"><span className="text-muted-foreground">Window End</span><span>{new Date(run.windowEndTs).toLocaleString("en-US", { timeZone: "UTC" })} UTC</span></div>}
           {run.startedTs && <div className="flex justify-between"><span className="text-muted-foreground">Started</span><span>{new Date(run.startedTs).toLocaleString()}</span></div>}
           {run.endedTs && <div className="flex justify-between"><span className="text-muted-foreground">Ended</span><span>{new Date(run.endedTs).toLocaleString()}</span></div>}
           {run.errorSummary && <div className="flex justify-between"><span className="text-muted-foreground">Error</span><span className="text-red-500">{run.errorSummary}</span></div>}
