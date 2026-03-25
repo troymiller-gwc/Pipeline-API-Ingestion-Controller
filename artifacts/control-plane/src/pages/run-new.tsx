@@ -6,11 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Eye, ArrowLeft } from "lucide-react";
+import { Play, ArrowLeft, Calendar } from "lucide-react";
 
 export default function RunNewPage() {
   const [, params] = useRoute("/runs/new/:endpointId");
@@ -24,121 +21,104 @@ export default function RunNewPage() {
     enabled: !!endpointId,
   });
 
-  const { data: paramsData } = useQuery({
-    queryKey: ["parameters", endpointId],
-    queryFn: () => api.parameters.list(endpointId),
-    enabled: !!endpointId,
-  });
-
-  const [paramValues, setParamValues] = useState<Record<string, string>>({});
-  const [preview, setPreview] = useState<any>(null);
-
-  const previewMutation = useMutation({
-    mutationFn: () => api.endpoints.preview(endpointId, paramValues),
-    onSuccess: (data) => setPreview(data.data),
-    onError: (err: Error) => toast({ title: "Preview error", description: err.message, variant: "destructive" }),
-  });
+  const [windowStart, setWindowStart] = useState("");
+  const [windowEnd, setWindowEnd] = useState("");
 
   const runMutation = useMutation({
     mutationFn: () => {
       const endpoint = endpointData?.data;
+      if (!endpoint) throw new Error("Endpoint not loaded");
+      if (!windowStart || !windowEnd) throw new Error("Both start and end dates are required");
+
       return api.runs.create({
-        sourceSystemId: endpoint?.sourceSystemId,
+        sourceSystemId: endpoint.sourceSystemId,
         endpointId,
         runType: "MANUAL",
         requestedBy: "operator",
-        windowStartTs: paramValues.startDate ? new Date(paramValues.startDate).toISOString() : undefined,
-        windowEndTs: paramValues.endDate ? new Date(paramValues.endDate).toISOString() : undefined,
+        windowStartTs: new Date(windowStart).toISOString(),
+        windowEndTs: new Date(windowEnd).toISOString(),
       });
     },
     onSuccess: (data) => {
-      toast({ title: "Run created" });
+      toast({ title: "Run triggered", description: "The extraction job has been started." });
       navigate(`/runs/${data.data.runId}`);
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const endpoint = endpointData?.data;
-  const parameters = paramsData?.data ?? [];
 
   if (!endpoint) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
+  const paginationConfig = endpoint.paginationConfigJson
+    ? (typeof endpoint.paginationConfigJson === "string" ? JSON.parse(endpoint.paginationConfigJson) : endpoint.paginationConfigJson)
+    : {};
+
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-6 max-w-2xl">
       <Button variant="ghost" size="sm" onClick={() => navigate("/endpoints")} className="mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" />Back to Endpoints
       </Button>
 
-      <h1 className="text-2xl font-bold mb-1">Manual Run</h1>
+      <h1 className="text-2xl font-bold mb-1">Trigger Extraction</h1>
       <p className="text-muted-foreground text-sm mb-6">{endpoint.endpointName} &middot; {endpoint.sourceSystemId}</p>
 
       <Card className="mb-6">
-        <CardHeader><CardTitle className="text-base">Parameters</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Date Window
+          </CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4">
-          {parameters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No parameters configured for this endpoint.</p>
-          ) : (
-            parameters.map((p: any) => {
-              const allowedValues = p.allowedValuesJson ? (typeof p.allowedValuesJson === "string" ? JSON.parse(p.allowedValuesJson) : p.allowedValuesJson) : null;
-              return (
-                <div key={p.endpointParameterId} className="space-y-1">
-                  <Label className="flex items-center gap-2">
-                    {p.parameterLabel || p.parameterName}
-                    {p.isRequired && <Badge variant="destructive" className="text-[10px] px-1 py-0">Required</Badge>}
-                    <span className="text-xs text-muted-foreground font-normal">{p.parameterLocation} &middot; {p.dataType}</span>
-                  </Label>
-                  {Array.isArray(allowedValues) && allowedValues.length > 0 ? (
-                    <Select value={paramValues[p.parameterName] ?? ""} onValueChange={(v) => setParamValues({ ...paramValues, [p.parameterName]: v })}>
-                      <SelectTrigger><SelectValue placeholder={`Select ${p.parameterLabel || p.parameterName}...`} /></SelectTrigger>
-                      <SelectContent>
-                        {allowedValues.map((v: string) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      type={p.dataType === "DATE" || p.dataType === "DATETIME" ? "datetime-local" : p.dataType === "NUMBER" || p.dataType === "INTEGER" ? "number" : "text"}
-                      value={paramValues[p.parameterName] ?? ""}
-                      onChange={(e) => setParamValues({ ...paramValues, [p.parameterName]: e.target.value })}
-                      placeholder={p.helpText || p.defaultValue || ""}
-                      required={p.isRequired}
-                    />
-                  )}
-                  {p.helpText && <p className="text-xs text-muted-foreground">{p.helpText}</p>}
-                </div>
-              );
-            })
-          )}
+          <p className="text-sm text-muted-foreground">
+            Select the date range to extract. All timestamps are in UTC.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="windowStart">Start Date/Time (UTC)</Label>
+              <Input
+                id="windowStart"
+                type="datetime-local"
+                value={windowStart}
+                onChange={(e) => setWindowStart(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="windowEnd">End Date/Time (UTC)</Label>
+              <Input
+                id="windowEnd"
+                type="datetime-local"
+                value={windowEnd}
+                onChange={(e) => setWindowEnd(e.target.value)}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3 mb-6">
-        <Button variant="outline" onClick={() => previewMutation.mutate()} disabled={previewMutation.isPending}>
-          <Eye className="h-4 w-4 mr-2" />{previewMutation.isPending ? "Loading..." : "Preview Request"}
-        </Button>
-        <Button onClick={() => runMutation.mutate()} disabled={runMutation.isPending}>
-          <Play className="h-4 w-4 mr-2" />{runMutation.isPending ? "Creating..." : "Trigger Run"}
-        </Button>
-      </div>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base">Endpoint Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm space-y-1 text-muted-foreground">
+            <div><span className="font-medium text-foreground">Method:</span> {endpoint.httpMethod}</div>
+            <div><span className="font-medium text-foreground">Path:</span> {endpoint.relativePath}</div>
+            <div><span className="font-medium text-foreground">Pagination:</span> {endpoint.paginationStrategy} (page size: {paginationConfig.pageSize ?? "default"})</div>
+            <div><span className="font-medium text-foreground">Incremental:</span> {endpoint.incrementalStrategy || "NONE"}</div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {preview && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Request Preview</CardTitle></CardHeader>
-          <CardContent>
-            <div className="bg-muted rounded-lg p-4 font-mono text-sm space-y-2 overflow-x-auto">
-              <div><Badge variant="outline">{preview.method}</Badge> <span className="ml-2 break-all">{preview.url}</span></div>
-              {preview.headers && Object.keys(preview.headers).length > 0 && (
-                <div className="text-muted-foreground">Headers: {JSON.stringify(preview.headers)}</div>
-              )}
-              {preview.body && <div className="text-muted-foreground">Body: {JSON.stringify(preview.body, null, 2)}</div>}
-              <Separator />
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Pagination: {preview.paginationStrategy}</div>
-                <div>Incremental: {preview.incrementalStrategy}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Button
+        size="lg"
+        onClick={() => runMutation.mutate()}
+        disabled={runMutation.isPending || !windowStart || !windowEnd}
+      >
+        <Play className="h-4 w-4 mr-2" />
+        {runMutation.isPending ? "Triggering..." : "Trigger Run"}
+      </Button>
     </div>
   );
 }
