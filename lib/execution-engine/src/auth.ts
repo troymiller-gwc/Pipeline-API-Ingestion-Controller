@@ -36,8 +36,15 @@ export async function resolveCredentials(
   }
 
   const client = new SecretManagerServiceClient();
+  const gcpProject = process.env.GCP_PROJECT_ID;
+  if (!gcpProject) {
+    throw new Error("GCP_PROJECT_ID environment variable is required for Secret Manager");
+  }
+  const fullSecretName = secretName.startsWith("projects/")
+    ? `${secretName}/versions/latest`
+    : `projects/${gcpProject}/secrets/${secretName}/versions/latest`;
   const [version] = await client.accessSecretVersion({
-    name: `${secretName}/versions/latest`,
+    name: fullSecretName,
   });
 
   const payload = version.payload?.data;
