@@ -89,6 +89,13 @@ export async function fetchWithRetry(
         continue;
       }
 
+      if (response.status >= 500 && attempt < rateLimiter.maxRetries) {
+        const waitMs = rateLimiter.getBackoffMs(attempt);
+        console.warn(`[Retry] Server error ${response.status}, retrying in ${waitMs}ms (attempt ${attempt + 1}/${rateLimiter.maxRetries})`);
+        await sleep(waitMs);
+        continue;
+      }
+
       return response;
     } catch (err) {
       lastError = err as Error;
