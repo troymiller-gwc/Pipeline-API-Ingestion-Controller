@@ -26,10 +26,10 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN cd artifacts/control-plane && npx vite build --config vite.config.ts
 
 FROM nginx:1.27-alpine AS production
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 COPY docker/nginx.conf /etc/nginx/nginx.conf.template
 COPY --from=build /app/artifacts/control-plane/dist /usr/share/nginx/html
-RUN rm /etc/nginx/conf.d/default.conf
 
 ENV API_UPSTREAM=http://api-server:8080
 EXPOSE 8080
-CMD ["/bin/sh", "-c", "envsubst '${API_UPSTREAM}' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "envsubst '$API_UPSTREAM' < /etc/nginx/nginx.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
