@@ -28,7 +28,7 @@ RUN cd artifacts/control-plane && npx vite build --config vite.config.ts
 FROM nginx:1.27-alpine AS production
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/*
 COPY docker/nginx-main.conf /etc/nginx/nginx.conf.template
-COPY --from=build /app/artifacts/control-plane/dist /usr/share/nginx/html
+COPY --from=build /app/artifacts/control-plane/dist/public /usr/share/nginx/html
 
 ENV API_UPSTREAM=http://api-server:8080
 EXPOSE 8080
