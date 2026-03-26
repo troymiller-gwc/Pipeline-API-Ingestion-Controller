@@ -114,11 +114,14 @@ async function acquireOAuth2Token(
 
   const data = await response.json() as { access_token: string; expires_in: number; token_type?: string };
   const now = Date.now();
+  const expiresInMs = (data.expires_in || 3600) * 1000;
+
+  console.log(`[Auth] Token acquired, expires_in=${data.expires_in}s (${Math.round(expiresInMs / 1000 / 60)}min)`);
 
   tokenCache.set(cacheKey, {
     accessToken: data.access_token,
     issuedAt: now,
-    expiresAt: now + (data.expires_in * 1000),
+    expiresAt: now + expiresInMs,
   });
 
   return { token: data.access_token, refreshed: true };
