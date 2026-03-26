@@ -209,6 +209,11 @@ async function executePage(
   let authHeaders = options.headers;
   const requestUrl = url.toString();
 
+  if (options.authManager?.isOAuth2()) {
+    const freshAuth = await options.authManager.getHeaders(false);
+    authHeaders = { ...options.headers, ...freshAuth.headers };
+  }
+
   const buildFetchOptions = (): RequestInit => {
     const fetchOpts: RequestInit = {
       method: options.httpMethod,
