@@ -1,11 +1,12 @@
 import { Link, useRoute } from "wouter";
-import { Database, Settings, Play, Activity, Server, FileCode } from "lucide-react";
+import { Database, Settings, Play, Activity, Server, FileCode, TableProperties } from "lucide-react";
 
 const navItems = [
   { path: "/", label: "Source Systems", icon: Server },
   { path: "/endpoints", label: "Endpoints", icon: Database },
   { path: "/runs", label: "Runs", icon: Play },
   { path: "/scripts", label: "Scripts", icon: FileCode },
+  { path: "/data-model", label: "Data Model", icon: TableProperties },
 ];
 
 function NavItem({ path, label, icon: Icon }: { path: string; label: string; icon: any }) {
