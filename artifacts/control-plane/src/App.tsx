@@ -9,6 +9,7 @@ import RunsPage from "@/pages/runs";
 import RunDetailPage from "@/pages/run-detail";
 import RunNewPage from "@/pages/run-new";
 import ScriptsPage from "@/pages/scripts";
+import DataModelPage from "@/pages/data-model";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/runs/new/:endpointId" component={RunNewPage} />
         <Route path="/runs/:id" component={RunDetailPage} />
         <Route path="/scripts" component={ScriptsPage} />
+        <Route path="/data-model" component={DataModelPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
