@@ -50,4 +50,10 @@ export const api = {
     replay: (id: string) => request<{ data: any }>(`/runs/${id}/replay`, { method: "POST", body: JSON.stringify({}) }),
     events: (id: string) => request<{ data: any[]; meta: any }>(`/runs/${id}/events`),
   },
+  monitor: {
+    contactDailyCounts: (startDate?: string) => {
+      const qs = startDate ? `?startDate=${startDate}` : "";
+      return request<{ data: any[] }>(`/monitor/contact-daily-counts${qs}`);
+    },
+  },
 };
