@@ -5,6 +5,7 @@ import endpointsRouter from "./endpoints";
 import parametersRouter from "./parameters";
 import runsRouter from "./runs";
 import schedulerRouter from "./scheduler";
+import monitorRouter from "./monitor";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(endpointsRouter);
 router.use(parametersRouter);
 router.use(runsRouter);
 router.use(schedulerRouter);
+router.use(monitorRouter);
 
 export default router;
