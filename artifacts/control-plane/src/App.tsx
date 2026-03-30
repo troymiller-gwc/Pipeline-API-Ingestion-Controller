@@ -10,6 +10,7 @@ import RunDetailPage from "@/pages/run-detail";
 import RunNewPage from "@/pages/run-new";
 import ScriptsPage from "@/pages/scripts";
 import DataModelPage from "@/pages/data-model";
+import InContactMonitorPage from "@/pages/incontact-monitor";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/runs/:id" component={RunDetailPage} />
         <Route path="/scripts" component={ScriptsPage} />
         <Route path="/data-model" component={DataModelPage} />
+        <Route path="/incontact-monitor" component={InContactMonitorPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
