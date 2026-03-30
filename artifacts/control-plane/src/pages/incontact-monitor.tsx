@@ -206,16 +206,25 @@ export default function InContactMonitorPage() {
                     }
                     const dayNum = parseInt(day.contact_date.value.split("-")[2], 10);
                     const color = day.contact_count === 0 ? "gray" : getColor(day.contact_count, dowAverages[day.dow] || 0);
+                    const avg = dowAverages[day.dow] || 0;
+                    const pctDiff = avg > 0 ? ((day.contact_count - avg) / avg) * 100 : 0;
+                    const arrow = day.contact_count === 0 || avg === 0 ? "" : pctDiff > 0 ? "▲" : pctDiff < 0 ? "▼" : "";
+                    const arrowColor = day.contact_count === 0 || avg === 0 ? "" : pctDiff > 0 ? "text-green-700" : "text-red-700";
                     return (
                       <div
                         key={di}
-                        className={`h-12 border rounded-sm flex flex-col items-center justify-center cursor-default transition-colors ${colorClasses[color]}`}
-                        title={`${day.contact_date.value}: ${formatNum(day.contact_count)} contacts (${DOW_NAMES[day.dow]} avg: ${formatNum(dowAverages[day.dow] || 0)})`}
+                        className={`h-14 border rounded-sm flex flex-col items-center justify-center cursor-default transition-colors ${colorClasses[color]}`}
+                        title={`${day.contact_date.value}: ${formatNum(day.contact_count)} contacts (${DOW_NAMES[day.dow]} avg: ${formatNum(avg)}, ${pctDiff >= 0 ? "+" : ""}${pctDiff.toFixed(1)}%)`}
                       >
                         <div className="text-[10px] leading-none opacity-70">{dayNum}</div>
                         <div className="text-[10px] font-bold leading-tight mt-0.5">
                           {day.contact_count > 0 ? formatNum(day.contact_count) : "—"}
                         </div>
+                        {arrow && (
+                          <div className={`text-[8px] font-bold leading-none ${arrowColor}`}>
+                            {arrow} {Math.abs(pctDiff).toFixed(1)}%
+                          </div>
+                        )}
                       </div>
                     );
                   })}
