@@ -1,5 +1,5 @@
 import { Link, useRoute } from "wouter";
-import { Database, Settings, Play, Activity, Server, FileCode, TableProperties } from "lucide-react";
+import { Database, Settings, Play, Activity, Server, FileCode, TableProperties, BarChart3 } from "lucide-react";
 
 const navItems = [
   { path: "/", label: "Source Systems", icon: Server },
@@ -7,6 +7,7 @@ const navItems = [
   { path: "/runs", label: "Runs", icon: Play },
   { path: "/scripts", label: "Scripts", icon: FileCode },
   { path: "/data-model", label: "Data Model", icon: TableProperties },
+  { path: "/incontact-monitor", label: "inContact Monitor", icon: BarChart3 },
 ];
 
 function NavItem({ path, label, icon: Icon }: { path: string; label: string; icon: any }) {
