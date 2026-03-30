@@ -17,8 +17,8 @@ function formatNum(n: number): string {
 function getColor(count: number, avg: number): "green" | "yellow" | "red" | "gray" {
   if (avg === 0) return "gray";
   const pctDiff = Math.abs(count - avg) / avg;
-  if (pctDiff <= 0.05) return "green";
-  if (pctDiff <= 0.10) return "yellow";
+  if (pctDiff < 0.10) return "green";
+  if (pctDiff <= 0.20) return "yellow";
   return "red";
 }
 
@@ -167,15 +167,15 @@ export default function InContactMonitorPage() {
         <span className="font-medium text-muted-foreground">Legend:</span>
         <span className="flex items-center gap-1.5">
           <span className={`inline-block w-3 h-3 rounded ${colorDotClasses.green}`} />
-          Within 5% of avg
+          Within 10% of avg
         </span>
         <span className="flex items-center gap-1.5">
           <span className={`inline-block w-3 h-3 rounded ${colorDotClasses.yellow}`} />
-          5%–10% off avg
+          10%–20% off avg
         </span>
         <span className="flex items-center gap-1.5">
           <span className={`inline-block w-3 h-3 rounded ${colorDotClasses.red}`} />
-          Over 10% off avg
+          Over 20% off avg
         </span>
         <span className="flex items-center gap-1.5">
           <span className={`inline-block w-3 h-3 rounded ${colorDotClasses.gray}`} />
